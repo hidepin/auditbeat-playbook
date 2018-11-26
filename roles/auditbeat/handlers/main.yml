@@ -1,0 +1,6 @@
+---
+# handlers file for auditbeat
+- name: auditbeat restart
+  service:
+    name: auditbeat.service
+    state: restarted

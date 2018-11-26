@@ -1,0 +1,47 @@
+---
+# tasks file for auditbeat
+- name: register subscription and yum proxy setting
+  import_tasks: yum_setup.yml
+
+- block:
+  - name: enable elastic repo
+    copy:
+      src: elastic.repo
+      dest: /etc/yum.repos.d/elastic.repo
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes
+    register: is_elastic_repo_setting
+
+  - name: auditbeat install
+    package:
+      name: auditbeat
+      state: latest
+
+  - name: auditbeat setting
+    template:
+      src: auditbeat.yml.j2
+      dest: /etc/auditbeat/auditbeat.yml
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes
+    register: is_auditbeat_setting
+    notify: auditbeat restart
+
+  always:
+  - name: auditbeat common backup settings
+    include_tasks: backup.yml
+    with_flattened:
+      - "{{ is_elastic_repo_setting|default() }}"
+      - "{{ is_auditbeat_setting|default() }}"
+    loop_control:
+      loop_var: backup_item
+
+- name: enable auditbeat service
+  service:
+    name: auditbeat.service
+    state: started
+    enabled: yes
+    daemon_reload: yes
